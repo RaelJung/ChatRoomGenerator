@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>티스토리용 채팅방 생성기</title>
+<style>
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 20px;
+    background: #f9f9f9;
+  }
+  h1 { font-size: 20px; margin-bottom: 10px; }
+  textarea, input {
+    width: 100%;
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    border-radius: 5px;
+    box-sizing: border-box;
+  }
+  button {
+    padding: 8px 15px;
+    background: #0078d4;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 5px;
+  }
+  .output {
+    background: #fff;
+    border: 1px solid #ccc;
+    padding: 15px;
+    white-space: pre-wrap;
+    margin-top: 20px;
+    font-size: 14px;
+    border-radius: 5px;
+  }
+  .theme-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  .theme-buttons button {
+    /* 기본 스타일 */
+    background: #0078d4;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    padding: 8px 15px;
+    margin-right: 5px;
+    transition: all 0.3s ease;
+  }
+  .theme-buttons button.selected {
+    background: #ffb800;      /* 골드 컬러로 강조 */
+    color: #333;
+    box-shadow: 0 0 8px rgba(255, 184, 0, 0.7);
+    border: 2px solid #ffaa00;
+  }
+  .char-preview {
+    display: flex;
+    overflow-x: auto;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ccc;
+  }
+  .char-item {
+    text-align: center;
+    margin-right: 15px;
+    flex: 0 0 auto;
+  }
+  .char-item img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: block;
+    margin-bottom: 5px;
+    object-fit: cover;
+  }
+</style>
+</head>
+<body>
+
+<h1>티스토리용 채팅방 생성기</h1>
+<details style="border:1px solid #ccc; border-radius:6px; padding:10px; background:#fff; max-width:600px; font-family:'Noto Sans KR', sans-serif; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin:10px 0;">
+  <summary style="cursor:pointer; font-weight:600; font-size:16px; color:#333; outline:none;">
+    📢 안내 사항
+  </summary>
+  <div style="margin-top:10px; font-size:14px; color:#555; line-height:1.5;">
+    <ul style="padding-left:20px; margin:0;">
+      <li>캐릭터를 지정해(이름, 이미지) 채팅방을 html 형태로 생성하는 생성기 입니다.</li>
+      <li>티스토리의 html 편집기를 사용해, 복사한 내용을 붙여넣기!</li>
+      <li>배경색이 마음에 안 든다면, html 코드 맨 윗줄 'background' 뒤를 원하는 컬러코드로 변경해보세요 😎</li>
+      <li>오류나 피드백이 있다면 raeljung1010@gmail.com로 부탁드려요. <span style="font-size:16px;">(*ᴗ͈ˬᴗ͈)ꕤ*.ﾟ</span></li>
+    </ul>
+  </div>
+</details>
+
+
+
+<!-- 테마 선택 버튼 -->
+<h1>테마 선택 ☺️</h1>
+<div class="theme-buttons">
+  <button data-theme="kakao" onclick="setTheme('kakao')">💬 카카오톡</button>
+  <button data-theme="imessage" onclick="setTheme('imessage')">📱 아이메세지</button>
+  <button data-theme="samsung" onclick="setTheme('samsung')">📩 삼성메시지</button>
+</div>
+
+<label>✅ 내 캐릭터 (형식: 이름, 이미지 URL)</label>
+<input type="text" id="myChar" placeholder="예: 나, https://example.com/me.jpg" />
+
+<label>✅ 상대방 캐릭터 등록 (형식: 이름, 이미지 URL)</label>
+<textarea id="characters" rows="4" placeholder="예: 철수, https://example.com/char1.jpg&#10;영희, https://example.com/char2.jpg"></textarea>
+
+<!-- 캐릭터 미리보기 -->
+<div class="char-preview" id="charPreview"></div>
+
+<label>✅ 대화 입력 (형식: 이름: 대사)</label>
+<textarea id="dialogue" rows="10" placeholder="나: 안녕&#10;철수: 반가워&#10;영희: 하이"></textarea>
+
+<div>
+  <button onclick="previewCharacters()">캐릭터 미리보기</button>
+  <button onclick="generateHTML()">HTML 생성</button>
+  <button onclick="copyToClipboard()">복사</button>
+</div>
+
+<div class="output" id="output"></div>
+
+<script>
+  const themes = {
+    kakao: {
+      background: '#f9e4b7',
+      myBubble: '#ffeb33',
+      otherBubble: '#ffffff',
+      myTextColor: '#000000'
+    },
+    imessage: {
+      background: '#ffffff',
+      myBubble: '#007aff',
+      otherBubble: '#e5e5ea',
+      myTextColor: '#ffffff'
+    },
+    samsung: {
+      background: '#ffffff',
+      myBubble: '#2189ff',
+      otherBubble: '#e7f3ff',
+      myTextColor: '#ffffff'
+    }
+  };
+
+  let currentTheme = themes.kakao;
+
+  function setTheme(name) {
+    currentTheme = themes[name];
+    alert(`${name} 테마가 적용되었습니다!`);
+
+    const buttons = document.querySelectorAll('.theme-buttons button');
+    buttons.forEach(btn => {
+      if (btn.dataset.theme === name) {
+        btn.classList.add('selected');
+      } else {
+        btn.classList.remove('selected');
+      }
+    });
+  }
+
+  function escapeHTML(str) {
+    return str.replace(/[&<>"']/g, tag => (
+      {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[tag]
+    ));
+  }
+
+  function previewCharacters() {
+    const myCharLine = document.getElementById('myChar').value.trim();
+    const charLines = document.getElementById('characters').value.trim().split('\n');
+
+    const charList = [];
+    if (myCharLine.includes(',')) {
+      const [name, url] = myCharLine.split(',').map(s => s.trim());
+      if (name && url) charList.push({ name, url });
+    }
+
+    for (const line of charLines) {
+      const [name, url] = line.split(',').map(s => s.trim());
+      if (name && url) charList.push({ name, url });
+    }
+
+    const previewContainer = document.getElementById('charPreview');
+    previewContainer.innerHTML = '';
+    charList.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'char-item';
+      div.innerHTML = `<img src="${c.url}" alt="${c.name}"><div>${c.name}</div>`;
+      previewContainer.appendChild(div);
+    });
+  }
+
+  function generateHTML() {
+    const myCharLine = document.getElementById('myChar').value.trim();
+    let myName = '', myImage = '';
+    if (myCharLine.includes(',')) {
+      [myName, myImage] = myCharLine.split(',').map(s => s.trim());
+    }
+
+    const charLines = document.getElementById('characters').value.trim().split('\n');
+    const dialogueLines = document.getElementById('dialogue').value.trim().split('\n');
+
+    const characterMap = {};
+    if (myName && myImage) {
+      characterMap[myName] = myImage;
+    }
+    for (const line of charLines) {
+      const [name, url] = line.split(',').map(s => s.trim());
+      if (name && url) {
+        characterMap[name] = url;
+      }
+    }
+
+    let html = `<div style="font-family: 'Noto Sans KR', sans-serif; font-weight: 300; background:${currentTheme.background}; padding:10px;">\n`;
+
+    dialogueLines.forEach(line => {
+      const sepIdx = line.indexOf(':');
+      if (sepIdx === -1) return;
+
+      const name = line.slice(0, sepIdx).trim();
+      const message = escapeHTML(line.slice(sepIdx + 1).trim());
+      const isMe = name === myName;
+
+      const imgURL = characterMap[name] || 'https://via.placeholder.com/40';
+      const align = isMe ? 'right' : 'left';
+      const bubbleColor = isMe ? currentTheme.myBubble : currentTheme.otherBubble;
+      const textColor = isMe ? currentTheme.myTextColor : '#000000';
+      const textAlign = isMe ? 'right' : 'left';
+      const marginSide = isMe ? 'left' : 'right';
+
+      html += `
+    <div style="overflow:hidden; margin-bottom:15px; clear:both;">
+      <div style="float:${align}; margin-${marginSide}:10px;">
+        <img src="${imgURL}"
+            alt="${name}"
+            style="width:40px; height:40px; border-radius:50%;">
+      </div>
+      <div style="display:inline-block; float:${align}; text-align:${textAlign}; max-width:80%;">
+        <div style="font-size:12px; color:#555; text-align:${textAlign}; margin-bottom:3px;">${name}</div>
+        <div style="display:inline-block; background:${bubbleColor}; color:${textColor}; padding:10px 15px; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,0.1); font-size:13px; text-align:left;">${message}</div>
+      </div>
+    </div>\n`;
+    });
+
+    html += `</div>`;
+    document.getElementById('output').innerText = html;
+  }
+
+  function copyToClipboard() {
+    const text = document.getElementById('output').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      alert('HTML 코드가 복사되었습니다!');
+    });
+  }
+</script>
+
+</body>
+</html>
